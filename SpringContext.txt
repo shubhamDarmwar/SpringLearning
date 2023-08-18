@@ -1,0 +1,192 @@
+Spring Context
+
+1. Using the @Bean annotation
+
+@Configuration
+public class ProjectConfig {
+ 
+
+ // Multiple beans for same class
+  @Bean(name = "koko")
+  @Primary
+  Parrot parrot1() {
+    var p = new Parrot();
+    p.setName("Koko");
+    return p;
+  }
+ 
+  @Bean
+  Parrot parrot2() {
+    var p = new Parrot();
+    p.setName("Miki");
+    return p;
+  }
+ 
+  @Bean(name = "Riki")
+  Parrot parrot3() {
+    var p = new Parrot();
+    p.setName("Riki");
+    return p;
+  }
+
+// Beans of types that we don't have access to.
+ @Bean
+  String hello() {
+    return "Hello";
+  }
+ 
+  @Bean
+  Integer ten() {
+    return 10;
+  }
+
+}
+
+-- Getting beans form spring context 
+
+@Configuration
+@ComponentScan(basePackages = "main")     ❶
+public class ProjectConfig {
+	public class Main {
+ 
+  public static void main(String[] args) {
+    var context = new AnnotationConfigApplicationContext(
+                   ProjectConfig.class);
+ 
+    Parrot p = context.getBean(Parrot.class);
+    System.out.println(p.getName());
+ 
+    String s = context.getBean(String.class);
+    System.out.println(s);
+ 
+    Integer n = context.getBean(Integer.class);
+    System.out.println(n);
+
+    Parrot p = context.getBean("parrot2", Parrot.class);
+
+  }
+}
+
+
+2. Using stereotype annotations to add beans to the Spring context
+
+
+@Component               ❶
+public class Parrot {
+ 
+  private String name;
+ 
+  public String getName() {
+    return name;
+  }
+ 
+  public void setName(String name) {
+    this.name = name;
+  }
+}
+
+
+-- Get beean form context
+
+@Configuration
+@ComponentScan(basePackages = "main")     ❶
+public class ProjectConfig {
+ 
+
+	public class Main {
+	 
+	  public static void main(String[] args) {
+	    var context = new 
+	      AnnotationConfigApplicationContext(ProjectConfig.class);
+	 
+	      Parrot p = context.getBean(Parrot.class);
+	 
+	      System.out.println(p);             ❶
+	      System.out.println(p.getName());   ❷
+	  }
+	}
+}
+
+
+
+Comparision between 
+
+
+-- Using the @Bean annotation
+
+You have full control over the instance creation you add to the Spring context. It is your responsibility to create and configure the instance in the body of the method annotated with @Bean. Spring only takes that instance and adds it to the context as-is.
+
+You can use this method to add more instances of the same type to the Spring context. Remember, in section 2.1.1 we added three Parrot instances into the Spring context.
+
+You can use the @Bean annotation to add to the Spring context any object instance. The class that defines the instance doesn’t need to be defined in your app. Remember, earlier we added a String and an Integer to the Spring context.
+
+You need to write a separate method for each bean you create, which adds boilerplate code to your app. For this reason, we prefer using @Bean as a second option to stereotype annotations in our projects.
+
+
+
+-- Using stereotype annotations
+
+You only have control over the instance after the framework creates it.
+
+This way, you can only add one instance of the class to the context.
+
+You can use stereotype annotations only to create beans of the classes your application owns. For example, you couldn’t add a bean of type String or Integer like we did in section 2.1.1 with the @Bean annotation because you don’t own these classes to change them by adding a stereotype annotation.
+
+Using stereotype annotations to add beans to the Spring context doesn’t add boilerplate code to your app. You’ll prefer this approach in general for the classes that belong to your app.
+
+
+
+
+Using @PostConstruct to manage the instance after its creation
+
+@Component
+public class Parrot {
+ 
+  private String name;
+ 
+  @PostConstruct
+  public void init() {
+    this.name = "Kiki";
+  }
+ 
+  // Omitted code
+}
+
+Very similarly, but less encountered in real-world apps, you can use an annotation named @PreDestroy. With this annotation, you define a method that Spring calls immediately before closing and clearing the context. 
+
+
+3. Programmatically adding beans to the Spring context
+
+
+To add a bean to the Spring context using a programmatic approach, you just need to call the registerBean() method of the ApplicationContext instance. The registerBean() has four parameters, as presented in the next code snippet:
+
+<T> void registerBean(
+  String beanName, 
+  Class<T> beanClass, 
+  Supplier<T> supplier, 
+  BeanDefinitionCustomizer... customizers);
+
+
+  public class Main {
+ 
+  public static void main(String[] args) {
+    var context = 
+      new AnnotationConfigApplicationContext(
+          ProjectConfig.class);
+ 
+      Parrot x = new Parrot();                     ❶
+      x.setName("Kiki");
+ 
+      Supplier<Parrot> parrotSupplier = () -> x;   ❷
+ 
+      context.registerBean("parrot1", 
+        Parrot.class, parrotSupplier);             ❸
+ 	
+ 	context.registerBean("parrot1", 
+                Parrot.class, 
+                parrotSupplier, 
+                bc -> bc.setPrimary(true));
+  }
+}
+
+

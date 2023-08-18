@@ -1,0 +1,124 @@
+Aspect 
+
+What code you want Spring to execute when you call specific methods. This is named an aspect.
+When the app should execute this logic of the aspect (e.g., before or after the method call, instead of the method call). This is named the advice.
+Which methods the framework needs to intercept and execute the aspect for them. This is named a pointcut.
+
+With aspects terminology, you’ll also find the concept of a join point, which defines the event that triggers the execution of an aspect. But with Spring, this event is always a method call.
+
+For Spring to intercept the method, the object that defines the intercepted method needs to be a bean in the Spring context.
+
+1. Implementing a simple aspect.
+
+Enabel Aspects:
+@Configuration
+@ComponentScan(basePackages = "services")
+@EnableAspectJAutoProxy                     ❶
+public class ProjectConfig {
+}
+
+
+Create Aspect:
+
+@Aspect
+public class LoggingAspect {
+ 
+  private Logger logger = Logger.getLogger(LoggingAspect.class.getName());
+ 
+  @Around("execution(* services.*.*(..))")
+  public void log(ProceedingJoinPoint joinPoint) throws Throwable {
+
+  String methodName = joinPoint.getSignature().getName();
+  Object [] arguments = joinPoint.getArgs();
+
+
+    logger.info("Method will execute");                              ❶
+    joinPoint.proceed();                                             ❷
+    logger.info("Method executed");                                  ❸
+  }
+}
+
+Aspects are even more powerful. They can alter the execution of the intercepted method by
+
+Changing the value of the parameters sent to the method
+Changing the returned value received by the caller
+Throwing an exception to the caller or catching and treating an exception thrown by the intercepted method
+
+
+
+2. Intercepting annotated methods
+
+- Define a custom annotation, and make it accessible at runtime. We’ll call this annotation @ToLog.
+- Use a different AspectJ pointcut expression for the aspect method to tell the aspect to intercept the methods annotated with the custom annotation.
+
+
+@Retention(RetentionPolicy.RUNTIME)         ❶
+@Target(ElementType.METHOD)                 ❷
+public @interface ToLog {
+}
+
+
+@Service
+public class CommentService {
+ 
+  private Logger logger = Logger.getLogger(CommentService.class.getName());
+ 
+  public void publishComment(Comment comment) {
+    logger.info("Publishing comment:" + comment.getText());
+  }
+ 
+  @ToLog                                         ❶
+  public void deleteComment(Comment comment) {
+    logger.info("Deleting comment:" + comment.getText());
+  }
+ 
+  public void editComment(Comment comment) {
+    logger.info("Editing comment:" + comment.getText());
+  }
+}
+
+
+@Aspect
+public class LoggingAspect {
+ 
+  private Logger logger = Logger.getLogger(LoggingAspect.class.getName());
+ 
+  @Around("@annotation(ToLog)")                                        ❶
+  public Object log(ProceedingJoinPoint joinPoint) throws Throwable {
+    // Omitted code
+  }
+}
+
+
+Other than @Around, Spring offers the following advice annotations:
+
+@Before—Calls the method defining the aspect logic before the execution of the intercepted method.
+
+@AfterReturning—Calls the method defining the aspect logic after the method successfully returns, and provides the returned value as a parameter to the aspect method. The aspect method isn’t called if the intercepted method throws an exception.
+
+@AfterThrowing—Calls the method defining the aspect logic if the intercepted method throws an exception, and provides the exception instance as a parameter to the aspect method.
+
+@After—Calls the method defining the aspect logic only after the intercepted method execution, whether the method successfully returned or threw an exception.
+
+You use these advice annotations the same way as for @Around. You provide them with an AspectJ pointcut expression to weave the aspect logic to specific method executions. The aspect methods don’t receive the ProceedingJoinPoint parameter, and they cannot decide when to delegate to the intercepted method. This event already happens based on the annotation’s purpose (for example, for @Before, the intercepted method call will always happen after the aspect logic execution).
+Example:
+
+@Aspect
+@Order(2) 
+public class LoggingAspect {
+ 
+  private Logger logger = Logger.getLogger(LoggingAspect.class.getName());
+ 
+  @AfterReturning(value = "@annotation(ToLog)",                    ❶
+                  returning = "returnedValue")                     ❷
+  public void log(Object returnedValue) {                          ❸
+    logger.info("Method executed and returned " + returnedValue);
+  }
+}
+
+
+
+The aspect execution chain:
+
+joinPoint.proceed(); call will invoke next aspect
+
