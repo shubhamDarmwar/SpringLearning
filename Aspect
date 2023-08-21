@@ -51,6 +51,7 @@ Throwing an exception to the caller or catching and treating an exception thrown
 - Define a custom annotation, and make it accessible at runtime. We’ll call this annotation @ToLog.
 - Use a different AspectJ pointcut expression for the aspect method to tell the aspect to intercept the methods annotated with the custom annotation.
 
+In the next code snippet, you find the declaration of the custom annotation. The definition of the retention policy with @Retention(RetentionPolicy.RUNTIME) is critical. By default, in Java annotations cannot be intercepted at runtime. You need to explicitly specify that someone can intercept annotations by setting the retention policy to RUNTIME. The @Target annotation specifies which language elements we can use this annotation for. By default, you can annotate any language elements, but it’s always a good idea to restrict the annotation to only what you make it for—in our case, methods:
 
 @Retention(RetentionPolicy.RUNTIME)         ❶
 @Target(ElementType.METHOD)                 ❷
